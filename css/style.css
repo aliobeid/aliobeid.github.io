@@ -6,4 +6,4 @@ body {background-color:rgb(255, 255, 255) ; color:rgb(63, 63, 63)}
 
 header h1{ text-align: center;font-weight:normal; font-size:400% }
 
-body p {margin: 0 auto; width :  700px;font-size:115% }
+body p {margin: 0 auto; width :  700px;font-size:115% ;text-align: justify}
