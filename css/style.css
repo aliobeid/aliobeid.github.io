@@ -1,4 +1,4 @@
-* {font-family: 'CMS';font-size:18px;letter-spacing:-0.02rem;line-height:1.5}
+* {font-family: 'CMS';letter-spacing:-0.02rem;line-height:1.5}
 
 
 body {background-color:rgb(255, 255, 255) ;
@@ -11,11 +11,11 @@ body {background-color:rgb(255, 255, 255) ;
 
 header h1{ text-align: center;font-weight:normal; font-size:400% }
 
-body p {margin: 0 auto;font-size:115% ;text-align: justify}
+body p {margin: 10px 10px 10px 10px;font-size:115% ;text-align: justify}
 
 .floatrightimgcontainer{
 
-    margin: 5px 0px 0px 30px;
+    margin: 10px 10px 10px 10px;
     float: right;
 }
 
