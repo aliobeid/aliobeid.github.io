@@ -215,7 +215,14 @@
 
    /* About Section
    -------------------------------------------------------------------- */
-   #about .profile-pic {display: none;}
+   #about .profile-pic {      
+      width: 114px;
+      height: 114px;
+      margin-left: 0;
+   }
+   .aboutmeh{
+       text-align: center;
+   }
    #about .download .button {
       width: 100%;
       text-align: center;
@@ -312,6 +319,13 @@
    #message-warning, #message-success {
       width: 100%;
       margin-left: 0;
+   }
+   .feel{
+   transform: translate(0,0);
+   position: relative;
+   }
+   .form{
+    margin-left: 0;
    }
 
 

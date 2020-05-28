@@ -793,8 +793,16 @@ call-to-action .button {
    padding-top: 96px;
    padding-bottom: 102px;
    color: #636363;
+   overflow: hidden;
 }
-#contact .section-head { margin-bottom: 42px; }
+.feel{
+  transform: translate(10%,0);
+  position: relative;
+}
+.form{
+  margin-left: 25%;
+}
+#contact .section-head { margin-bottom: 42px;  }
 
 #contact a, #contact a:visited  { color: #11ABB0; }
 #contact a:hover, #contact a:focus { color: #fff; }
@@ -816,6 +824,7 @@ call-to-action .button {
    text-align: left;
    float: left;
    color: #ebeeee;
+
 }
 
 #contact h4 {
@@ -826,6 +835,7 @@ call-to-action .button {
 #contact p.lead {
    font: 18px/36px 'opensans-light', sans-serif;
    padding-right: 3%;
+   margin-left: 0;
 }
 #contact .header-col { padding-top: 6px; }
 
