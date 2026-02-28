@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probabilistic Price Density </title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:     #0d1117;
+  --panel:  #161b22;
+  --panel2: #1c2128;
+  --border: #30363d;
+  --text:   #e6edf3;
+  --muted:  #7d8590;
+  --accent: #f7931a;
+  --blue:   #58a6ff;
+  --font:   -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono:   'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 9px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.header-title { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.btc-icon { color: var(--accent); font-size: 16px; }
+#load-status { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+/* ── Chart sections ── */
+#resid-wrap {
+  height: 100vh;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+#resid-hist-wrap {
+  flex: 1;
+  min-height: 80px;
+  position: relative;
+}
+#resid-ts-wrap {
+  flex: 2;
+  min-height: 0;
+  position: relative;
+}
+#chart-wrap {
+  height: 50vh;
+  flex-shrink: 0;
+  position: relative;
+}
+#resid-hist-wrap canvas,
+#resid-ts-wrap   canvas,
+#chart-wrap      canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── Controls ── */
+.controls {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.ctrl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 28px; }
+.ctrl-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; min-width: 48px; }
+.ctrl-note  { font-size: 9px; color: #484f58; font-style: italic; }
+.vdiv { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+
+.btn {
+  padding: 4px 10px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.btn:hover { background: #262c36; color: var(--text); border-color: #484f58; }
+.btn.active      { background: rgba(247,147,26,.12); border-color: var(--accent); color: var(--accent); }
+.btn.active-blue { background: rgba(88,166,255,.10);  border-color: var(--blue);   color: var(--blue);   }
+.btn-group { display: flex; gap: 2px; }
+.btn-group .btn             { border-radius: 0; }
+.btn-group .btn:first-child { border-radius: 5px 0 0 5px; }
+.btn-group .btn:last-child  { border-radius: 0 5px 5px 0; }
+
+.date-in {
+  padding: 4px 8px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 11px;
+  font-family: var(--font);
+  width: 110px;
+}
+.date-in:focus { outline: none; border-color: var(--blue); }
+
+.q-pills { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+.q-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 20px;
+  font-size: 10.5px; font-family: var(--mono);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all 0.15s; user-select: none; white-space: nowrap;
+}
+.q-pill .swatch { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; transition: opacity 0.15s; }
+.q-pill.on  { background: rgba(255,255,255,.05); color: var(--text); }
+.q-pill.off { background: transparent; color: var(--muted); border-color: var(--border) !important; }
+.q-pill.off .swatch { opacity: 0.25; }
+.q-pill.modal-pill.on { font-weight: 600; }
+
+/* ── Price overlay ── */
+.overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; pointer-events: none; z-index: 2;
+}
+.overlay svg { opacity: 0.18; }
+.overlay h2 { font-size: 15px; font-weight: 500; color: var(--muted); }
+.overlay p  { font-size: 12px; color: #484f58; max-width: 320px; text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    Probabilistic Price Density - Ali Obeid
+  </div>
+  <span id="load-status">Loading&#8230;</span>
+</div>
+
+<!-- ═══ RESIDUALS SECTION (top) ═══ -->
+<div id="resid-wrap">
+  <!-- ax1: density histogram — X=residual (inverted), Y=density (bars up, no X labels) -->
+  <div id="resid-hist-wrap">
+    <canvas id="resid-hist-canvas"></canvas>
+  </div>
+  <!-- ax2: time series — X=residual (inverted, shared with hist), Y=date -->
+  <div id="resid-ts-wrap">
+    <canvas id="resid-ts-canvas"></canvas>
+  </div>
+</div>
+
+<!-- ═══ SHARED CONTROLS ═══ -->
+<div class="controls">
+  <div class="ctrl-row">
+    <span class="ctrl-label">Range</span>
+    <select id="y-start" class="date-in" onchange="applyYearRange()" style="width:72px"></select>
+    <span style="color:var(--muted);font-size:11px;">&#8211;</span>
+    <select id="y-end" class="date-in" onchange="applyYearRange()" style="width:72px"></select>
+
+    <div class="vdiv"></div>
+    <span class="ctrl-label">Scale</span>
+    <div class="btn-group">
+      <button class="btn active" id="sc-log" onclick="setScale('log')">Log</button>
+      <button class="btn"        id="sc-lin" onclick="setScale('linear')">Linear</button>
+    </div>
+    <span class="ctrl-note">(price)</span>
+  </div>
+</div>
+
+<!-- ═══ PRICE SECTION (bottom) ═══ -->
+<div id="chart-wrap">
+  <div class="overlay" id="overlay">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#7d8590" stroke-width="1.2">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <h2 id="overlay-title">Loading data&#8230;</h2>
+    <p id="overlay-msg">Fetching combined.csv and quant_results.json</p>
+  </div>
+  <canvas id="price-canvas" style="display:none"></canvas>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// Chart instances
+// ═══════════════════════════════════════════════
+let _chart          = null;
+let _residTsChart   = null;
+let _residHistChart = null;
+let _resizeTimer    = null;
+
+// ═══════════════════════════════════════════════
+// Constants
+// ═══════════════════════════════════════════════
+const GENESIS = new Date('2009-01-03');
+
+const HALVINGS = [
+  { date: '2012-11-28', label: 'H1', cutoff: false },
+  { date: '2016-07-09', label: 'H2', cutoff: false },
+  { date: '2020-05-11', label: 'H3', cutoff: false },
+  { date: '2024-04-19', label: 'H4', cutoff: true  },
+  { date: '2028-04-20', label: 'H5', cutoff: false },
+];
+
+const FIXED_QS = [0.01, 0.1, 0.9, 0.99];
+const H4_TS    = new Date('2024-04-19').getTime();
+
+// ═══════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════
+const S = {
+  prices:   null,
+  model:    null,
+  qKeys:    [],
+  scale:    'log',
+  range:    null,
+  yRange:   null,
+  rendered: false,
+};
+
+let _residData = null;
+
+// ═══════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════
+const el = id => document.getElementById(id);
+function daysSince(d)           { return (d - GENESIS) / 86400000; }
+function powerPrice(days, a, b) { return a * Math.pow(days, b); }
+
+function coolwarm(t) {
+  let r, g, b;
+  if (t <= 0.5) {
+    const s = t * 2;
+    r = Math.round(62  + s * (192 - 62));
+    g = Math.round(80  + s * (185 - 80));
+    b = Math.round(200 + s * (220 - 200));
+  } else {
+    const s = (t - 0.5) * 2;
+    r = Math.round(192 + s * (182 - 192));
+    g = Math.round(185 + s * (48  - 185));
+    b = Math.round(220 + s * (55  - 220));
+  }
+  return `rgba(${r},${g},${b},0.82)`;
+}
+
+// ═══════════════════════════════════════════════
+// Skewnorm PDF (scipy-compatible, A&S approximation)
+// ═══════════════════════════════════════════════
+function _erf(x) {
+  const sign = x >= 0 ? 1 : -1;
+  x = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((1.061405429*t - 1.453152027)*t) + 1.421413741)*t
+                   - 0.284496736)*t + 0.254829592) * t * Math.exp(-x * x);
+  return sign * y;
+}
+function _npdf(x) { return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI); }
+function _ncdf(x) { return 0.5 * (1 + _erf(x / Math.SQRT2)); }
+function skewnormPdf(x, a, loc, scale) {
+  const z = (x - loc) / scale;
+  return (2 / scale) * _npdf(z) * _ncdf(a * z);
+}
+
+function skewnormCdf(x, a, loc, scale) {
+  const lo = loc - 8 * scale;
+  const n = 200;  // even, for Simpson's rule
+  const h = (x - lo) / n;
+  let sum = 0;
+  for (let i = 0; i <= n; i++) {
+    const w = (i === 0 || i === n) ? 1 : (i % 2 === 0 ? 2 : 4);
+    sum += w * skewnormPdf(lo + i * h, a, loc, scale);
+  }
+  return Math.min(1, Math.max(0, sum * h / 3));
+}
+
+// ═══════════════════════════════════════════════
+// Compute residuals + X domain (called once)
+// ═══════════════════════════════════════════════
+function computeResidData() {
+  const modal = S.model.modal_quantile;
+  const mkey  = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - modal) < 1e-9);
+  const { a: am, b: bm } = S.model.qr_results[mkey];
+
+  // BTC residuals: {x: residValue, y: dateTs}  (rotated for the ts chart)
+  const btcResid = [];
+  for (const d of S.prices) {
+    const days = daysSince(d.date);
+    if (days <= 0) continue;
+    const resid = Math.log(d.price / (am * Math.pow(days, bm)));
+    btcResid.push({ x: resid, y: d.date.getTime() });
+  }
+
+  const H4ts = H4_TS;
+  // For histogram: split by train/OOT
+  const residTrain = btcResid.filter(p => p.y <= H4ts).map(p => p.x);
+  const residOot   = btcResid.filter(p => p.y >  H4ts).map(p => p.x);
+
+  // X domain = full range of BTC residuals (matches Python's ax2.set_xlim)
+  const allR = btcResid.map(p => p.x);
+  const xMin = Math.min(...allR), xMax = Math.max(...allR);
+
+  _residData = { btcResid, residTrain, residOot, am, bm, xMin, xMax };
+}
+
+// ═══════════════════════════════════════════════
+// Price chart Y-range
+// ═══════════════════════════════════════════════
+function computeYRange() {
+  if (!S.range || !S.prices || !S.model) return null;
+  const s = new Date(S.range.start), e = new Date(S.range.end);
+  const pVals = S.prices.filter(d => d.date >= s && d.date <= e).map(d => d.price).filter(v => v > 0);
+  if (!pVals.length) return null;
+  let yMin = Math.min(...pVals), yMax = Math.max(...pVals);
+  const sDay = Math.max(daysSince(s), 1), eDay = daysSince(e);
+  S.qKeys.forEach(q => {
+    const jk = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q) < 1e-9);
+    if (!jk) return;
+    const { a, b } = S.model.qr_results[jk];
+    yMin = Math.min(yMin, powerPrice(sDay, a, b));
+    yMax = Math.max(yMax, powerPrice(eDay, a, b));
+  });
+  return S.scale === 'log'
+    ? [yMin / Math.pow(10, 0.08), yMax * Math.pow(10, 0.08)]
+    : [Math.max(0, yMin * 0.95), yMax * 1.05];
+}
+
+// ═══════════════════════════════════════════════
+// Data loading
+// ═══════════════════════════════════════════════
+async function mergeLatestPrices() {
+  try {
+    const resp = await fetch(
+      'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=30'
+    );
+    if (!resp.ok) return 0;
+    const rows = await resp.json();
+
+    const existingDates = new Set(
+      S.prices.map(d => d.date.toISOString().slice(0, 10))
+    );
+
+    let added = 0;
+    for (const row of rows) {
+      const date    = new Date(row[0]);
+      const dateStr = date.toISOString().slice(0, 10);
+      const price   = parseFloat(row[4]);
+      if (!existingDates.has(dateStr) && !isNaN(price) && price > 0) {
+        S.prices.push({ date, price });
+        added++;
+      }
+    }
+
+    if (added > 0) S.prices.sort((a, b) => a.date - b.date);
+    return added;
+  } catch (_) {
+    return 0;
+  }
+}
+
+async function loadData() {
+  try {
+    const [csvText, jsonText] = await Promise.all([
+      fetch('combined.csv').then(r => { if (!r.ok) throw new Error('combined.csv not found'); return r.text(); }),
+      fetch('quant_results.json').then(r => { if (!r.ok) throw new Error('quant_results.json not found'); return r.text(); }),
+    ]);
+
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    S.prices = parsed.data
+      .filter(r => r.Date && r.Price)
+      .map(r => ({ date: new Date(r.Date), price: parseFloat(r.Price) }))
+      .filter(r => !isNaN(r.price) && !isNaN(r.date.getTime()))
+      .sort((a, b) => a.date - b.date);
+
+    S.model = JSON.parse(jsonText);
+
+    const modal = S.model.modal_quantile;
+    S.qKeys = Object.keys(S.model.qr_results)
+      .map(Number)
+      .filter(q => FIXED_QS.some(fq => Math.abs(fq - q) < 1e-9) || Math.abs(q - modal) < 1e-9)
+      .sort((a, b) => a - b);
+
+    await mergeLatestPrices();
+    const last = S.prices[S.prices.length - 1];
+    const lastDate = last.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    el('load-status').textContent = `${fmtPrice(last.price)} \u00b7 ${lastDate}`;
+
+    computeResidData();
+    initRange();
+    buildColors();
+    renderAll();
+
+  } catch (err) {
+    el('overlay-title').textContent = 'Failed to load data';
+    el('overlay-msg').textContent   = err.message + ' \u2014 serve this page with a local HTTP server.';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// Quantile colors (assigned once at load)
+// ═══════════════════════════════════════════════
+const pillColors = {};
+
+function buildColors() {
+  const n = S.qKeys.length;
+  S.qKeys.forEach((q, i) => { pillColors[q] = coolwarm(n > 1 ? i / (n - 1) : 0.5); });
+}
+
+// ═══════════════════════════════════════════════
+// Time range
+// ═══════════════════════════════════════════════
+function futureYear() { return S.prices[S.prices.length - 1].date.getFullYear() + 1; }
+function firstYear()  { return S.prices[0].date.getFullYear(); }
+function yearRange(sy, ey) { return { start: `${sy}-01-01`, end: `${ey}-12-31` }; }
+
+function initRange() {
+  const fy = firstYear(), ly = futureYear();
+  const startSel = el('y-start'), endSel = el('y-end');
+  startSel.innerHTML = endSel.innerHTML = '';
+  for (let y = fy; y <= Math.max(ly, 2050); y++) {
+    startSel.innerHTML += `<option value="${y}">${y}</option>`;
+    endSel.innerHTML   += `<option value="${y}">${y}</option>`;
+  }
+  const defaultSy = Math.max(fy, new Date().getFullYear() - 5);
+  startSel.value = defaultSy;
+  endSel.value   = ly;
+  S.range  = yearRange(defaultSy, ly);
+  S.yRange = computeYRange();
+}
+
+function _applyRangeToCharts() {
+  const dateMin = new Date(S.range.start).getTime();
+  const dateMax = new Date(S.range.end).getTime();
+
+  // Price chart: date is on X axis
+  if (_chart) {
+    _chart.options.scales.x.min = dateMin;
+    _chart.options.scales.x.max = dateMax;
+    S.yRange = computeYRange();
+    if (S.yRange) { _chart.options.scales.y.min = S.yRange[0]; _chart.options.scales.y.max = S.yRange[1]; }
+    _chart.update('none');
+  }
+}
+
+function applyYearRange() {
+  const sy = parseInt(el('y-start').value), ey = parseInt(el('y-end').value);
+  if (isNaN(sy) || isNaN(ey) || sy >= ey) return;
+  S.range = yearRange(sy, ey);
+  S.yRange = computeYRange();
+  if (S.rendered) _applyRangeToCharts();
+}
+
+// ═══════════════════════════════════════════════
+// Scale (price chart only)
+// ═══════════════════════════════════════════════
+function setScale(sc) {
+  S.scale = sc;
+  el('sc-log').classList.toggle('active', sc === 'log');
+  el('sc-lin').classList.toggle('active', sc === 'linear');
+  S.yRange = computeYRange();
+  if (S.rendered) renderPrice();
+}
+
+// ═══════════════════════════════════════════════
+// Formatting
+// ═══════════════════════════════════════════════
+function fmtPrice(v) {
+  if (v == null || v <= 0) return '';
+  if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'k';
+  return '$' + v.toFixed(2);
+}
+function fmtAxisTick(v) {
+  if (v == null || v <= 0) return '';
+  if (v >= 1e9) return '$' + (v / 1e9).toFixed(1) + 'B';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return '$' + Math.round(v / 1e3) + 'k';
+  if (v >= 1)   return '$' + v.toFixed(0);
+  return '$' + v.toFixed(2);
+}
+
+// ═══════════════════════════════════════════════
+// Shared residual X axis options (both resid charts)
+//   reverse: true  →  positive residuals on LEFT (matches Python invert_xaxis)
+// ═══════════════════════════════════════════════
+function residXAxis(showLabels) {
+  const { xMin, xMax } = _residData;
+  return {
+    type: 'linear',
+    reverse: true,
+    min: xMin,
+    max: xMax,
+    ticks: showLabels
+      ? { color: '#6e7681', font: { size: 10 }, maxTicksLimit: 10 }
+      : { display: false },
+    grid:   { color: '#1e2430' },
+    border: { color: showLabels ? '#30363d' : 'transparent' },
+    title: showLabels ? {
+      display: true,
+      text: `ln(price\u2009/\u2009model)   \u2014   q\u202f=\u202f${S.model.modal_quantile.toFixed(3)} modal`,
+      color: '#6e7681',
+      font: { size: 9 },
+    } : { display: false },
+  };
+}
+
+// ═══════════════════════════════════════════════
+// Plugin: vertical reference lines at x=0 and x=mode_train
+//   used by BOTH resid charts (shared residual X axis)
+// ═══════════════════════════════════════════════
+const residVlinesPlugin = {
+  id: 'residVlines',
+  afterDatasetsDraw(chart) {
+    if (!_residData || !S.model) return;
+    const { ctx, chartArea: { left, top, right, bottom }, scales: { x } } = chart;
+    ctx.save();
+    [
+      { val: 0,                  color: '#3fb950', lbl: '0'    },
+      { val: S.model.mode_train, color: pillColors[S.model.modal_quantile] || '#f85149', lbl: '' },
+    ].forEach(({ val, color, lbl }) => {
+      const px = x.getPixelForValue(val);
+      if (px < left || px > right) return;
+      ctx.beginPath();
+      ctx.strokeStyle = color; ctx.lineWidth = 1.4;
+      ctx.setLineDash([4, 3]);
+      ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '8.5px system-ui,sans-serif';
+      ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(lbl, px, top + 3);
+    });
+    ctx.restore();
+  },
+};
+
+// ═══════════════════════════════════════════════
+// Plugin: vertical line on histogram at last BTC residual value
+// ═══════════════════════════════════════════════
+const residHistLastValuePlugin = {
+  id: 'residHistLastValue',
+  afterDatasetsDraw(chart) {
+    if (!_residData) return;
+    const lastResid = _residData.btcResid[_residData.btcResid.length - 1].x;
+    const { ctx, chartArea: { left, top, right, bottom }, scales: { x } } = chart;
+    const px = x.getPixelForValue(lastResid);
+    if (px < left || px > right) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(247,147,26,0.85)';
+    ctx.lineWidth = 1.1;
+    ctx.setLineDash([4, 3]);
+    ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  },
+};
+
+// ═══════════════════════════════════════════════
+// Plugin: vertical lines on histogram at each quantile's current offset
+//   offset = ln(a_q * t^b_q) - ln(am * t^bm)  evaluated at latest price date
+// ═══════════════════════════════════════════════
+const residHistQuantileLinesPlugin = {
+  id: 'residHistQuantileLines',
+  afterDatasetsDraw(chart) {
+    if (!_residData || !S.model || !S.qKeys) return;
+    const modal = S.model.modal_quantile;
+    const mkey  = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - modal) < 1e-9);
+    const { a: am, b: bm } = S.model.qr_results[mkey];
+    const lastDate = S.prices[S.prices.length - 1].date;
+    const days = daysSince(lastDate);
+    const { ctx, chartArea: { left, top, right, bottom }, scales: { x } } = chart;
+    const n = S.qKeys.length;
+    ctx.save();
+    S.qKeys.forEach((q, i) => {
+      if (Math.abs(q - modal) < 1e-9) return;  // modal already covered by residVlinesPlugin
+      const jk = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q) < 1e-9);
+      if (!jk) return;
+      const { a: aq, b: bq } = S.model.qr_results[jk];
+      const offset = Math.log(aq * Math.pow(days, bq)) - Math.log(am * Math.pow(days, bm));
+      const px = x.getPixelForValue(offset);
+      if (px < left || px > right) return;
+      const color = pillColors[q] || coolwarm(n > 1 ? i / (n - 1) : 0.5);
+      ctx.beginPath();
+      ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.7;
+      ctx.setLineDash([3, 3]);
+      ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    });
+    ctx.restore();
+  },
+};
+
+// ═══════════════════════════════════════════════
+// Plugin: horizontal halving lines on the residuals TS chart
+//   (Y axis = date — halvings are horizontal at each date)
+// ═══════════════════════════════════════════════
+const tsHalvingsPlugin = {
+  id: 'tsHalvings',
+  afterDatasetsDraw(chart) {
+    const { ctx, chartArea: { left, top, right, bottom }, scales: { y } } = chart;
+    ctx.save();
+    HALVINGS.forEach(hv => {
+      const yPx = y.getPixelForValue(new Date(hv.date).getTime());
+      if (yPx < top || yPx > bottom) return;
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(120,130,160,0.38)';
+      ctx.lineWidth   = 1.0;
+      ctx.setLineDash([2, 3]);
+      ctx.moveTo(left, yPx); ctx.lineTo(right, yPx); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '9px system-ui,sans-serif';
+      const tw = ctx.measureText(hv.label).width;
+      ctx.fillStyle = 'rgba(13,17,23,0.65)';
+      ctx.fillRect(left + 3, yPx - 8, tw + 6, 13);
+      ctx.fillStyle    = 'rgba(120,130,160,0.65)';
+      ctx.textAlign    = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(hv.label, left + 6, yPx);
+    });
+    ctx.restore();
+  },
+};
+
+// ═══════════════════════════════════════════════
+// Plugin: vertical halving lines on the price chart (time on X)
+// ═══════════════════════════════════════════════
+const halvingPlugin = {
+  id: 'halvings',
+  afterDatasetsDraw(chart) {
+    const { ctx, chartArea: { left, top, right, bottom } } = chart;
+    ctx.save();
+    HALVINGS.forEach(hv => {
+      const xPx = chart.scales.x.getPixelForValue(new Date(hv.date).getTime());
+      if (xPx < left || xPx > right) return;
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(120,130,160,0.38)';
+      ctx.lineWidth   = 1.0;
+      ctx.setLineDash([2, 3]);
+      ctx.moveTo(xPx, top); ctx.lineTo(xPx, bottom); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '9px system-ui,sans-serif';
+      const tw = ctx.measureText(hv.label).width;
+      ctx.fillStyle = 'rgba(13,17,23,0.65)';
+      ctx.fillRect(xPx - tw/2 - 3, top + 3, tw + 6, 14);
+      ctx.fillStyle    = 'rgba(120,130,160,0.65)';
+      ctx.textAlign    = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(hv.label, xPx, top + 5);
+    });
+    ctx.restore();
+  },
+};
+
+function tooltipRow(color, text) {
+  return `<div style="display:flex;align-items:center;gap:6px;line-height:1.7">` +
+    `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>` +
+    `<span>${text}</span></div>`;
+}
+
+function updatePriceTooltip(chart, cursorPx) {
+  let el = document.getElementById('price-tooltip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'price-tooltip';
+    el.style.cssText = 'position:absolute;pointer-events:none;z-index:10;' +
+      'background:#1c2128;border:1px solid #30363d;border-radius:4px;' +
+      'padding:7px 10px;font:11px system-ui,sans-serif;color:#e6edf3;' +
+      'white-space:nowrap;opacity:0;transition:opacity 0.1s';
+    chart.canvas.parentElement.appendChild(el);
+  }
+
+  const cursorTs  = chart.scales.x.getValueForPixel(cursorPx);
+  const lastBtcTs = S.prices[S.prices.length - 1].date.getTime();
+  const dateStr   = new Date(cursorTs).toISOString().slice(0, 10);
+
+  let btcRow = '';
+  const qRows = [];
+
+  chart.data.datasets.forEach((ds, di) => {
+    const pts = ds.data;
+    if (!pts || !pts.length) return;
+    // Binary search: first index where pts[i].x >= cursorTs
+    let lo = 0, hi = pts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (pts[mid].x < cursorTs) lo = mid + 1; else hi = mid;
+    }
+    // Also check lo-1 — whichever is nearer in time
+    if (lo > 0 && Math.abs(pts[lo - 1].x - cursorTs) <= Math.abs(pts[lo].x - cursorTs)) lo--;
+    const pt = pts[lo];
+
+    if (di === 0) {
+      if (cursorTs > lastBtcTs) return;        // cursor is in the future — hide BTC price
+      btcRow = tooltipRow(ds.borderColor, `\u20bf BTC: ${fmtPrice(pt.y)}`);
+    } else {
+      const q = S.qKeys[di - 1];
+      qRows.push(tooltipRow(ds.borderColor, `q=${q.toFixed(3)}: ${fmtPrice(pt.y)}`));
+    }
+  });
+
+  // Higher quantiles at top (matching chart visual order), lower quantiles at bottom
+  let html = `<div style="color:#8b949e;margin-bottom:4px">${dateStr}</div>`;
+  html += btcRow + qRows.reverse().join('');
+
+  el.innerHTML = html;
+  el.style.opacity = '1';
+
+  // Position: follow cursor x, pin near top of chart area; flip left when near right edge
+  const ca = chart.chartArea;
+  el.style.top  = (ca.top + 8) + 'px';
+  const flipX   = cursorPx > ca.left + (ca.right - ca.left) * 0.6;
+  el.style.left = (flipX ? cursorPx - el.offsetWidth - 12 : cursorPx + 12) + 'px';
+}
+
+const crosshairPlugin = {
+  id: 'crosshair',
+  afterEvent(chart, { event }) {
+    if (event.type === 'mouseout') {
+      chart._crosshairX = null;
+      const el = document.getElementById('price-tooltip');
+      if (el) el.style.opacity = '0';
+    } else {
+      chart._crosshairX = event.x;
+      if (chart.scales?.x) updatePriceTooltip(chart, event.x);
+    }
+    chart.draw();
+  },
+  afterDatasetsDraw(chart) {
+    if (chart._crosshairX == null) return;
+    const { ctx, chartArea: { top, bottom } } = chart;
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.moveTo(chart._crosshairX, top);
+    ctx.lineTo(chart._crosshairX, bottom);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+
+function updateResidTsTooltip(chart, cursorX, cursorY) {
+  let el = document.getElementById('resid-ts-tooltip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'resid-ts-tooltip';
+    el.style.cssText = 'position:absolute;pointer-events:none;z-index:10;' +
+      'background:#1c2128;border:1px solid #30363d;border-radius:4px;' +
+      'padding:7px 10px;font:11px system-ui,sans-serif;color:#e6edf3;' +
+      'white-space:nowrap;opacity:0;transition:opacity 0.1s';
+    chart.canvas.parentElement.appendChild(el);
+  }
+
+  const cursorTs    = chart.scales.y.getValueForPixel(cursorY);
+  const cursorResid = chart.scales.x.getValueForPixel(cursorX);
+  const date  = new Date(cursorTs);
+  const days  = daysSince(date);
+  if (days <= 0) { el.style.opacity = '0'; return; }
+
+  // price implied by cursor position: resid = log(price / (am * days^bm))
+  const { am, bm } = _residData;
+  const price   = am * Math.pow(days, bm) * Math.exp(cursorResid);
+  const dateStr = date.toISOString().slice(0, 10);
+
+  // Build (offset, q) pairs from ALL qr_results at this date, then interpolate
+  const qrPairs = Object.keys(S.model.qr_results)
+    .map(k => {
+      const qk = Number(k);
+      const { a: aq, b: bq } = S.model.qr_results[k];
+      const offset = Math.log(aq * Math.pow(days, bq)) - Math.log(am * Math.pow(days, bm));
+      return { offset, q: qk };
+    })
+    .sort((a, b) => a.offset - b.offset);
+
+  let q;
+  if (cursorResid <= qrPairs[0].offset) {
+    q = qrPairs[0].q;
+  } else if (cursorResid >= qrPairs[qrPairs.length - 1].offset) {
+    q = qrPairs[qrPairs.length - 1].q;
+  } else {
+    for (let i = 0; i < qrPairs.length - 1; i++) {
+      if (cursorResid >= qrPairs[i].offset && cursorResid <= qrPairs[i + 1].offset) {
+        const t = (cursorResid - qrPairs[i].offset) / (qrPairs[i + 1].offset - qrPairs[i].offset);
+        q = qrPairs[i].q + t * (qrPairs[i + 1].q - qrPairs[i].q);
+        break;
+      }
+    }
+  }
+
+  el.innerHTML = `<div style="color:#8b949e;margin-bottom:4px">${dateStr}</div>` +
+    `<div>${fmtPrice(price)}</div>` +
+    `<div style="color:#8b949e;margin-top:3px">q\u202f\u2248\u202f${q.toFixed(3)}</div>`;
+  el.style.opacity = '1';
+
+  const ca   = chart.chartArea;
+  const flipX = cursorX > ca.left + (ca.right - ca.left) * 0.6;
+  el.style.left = (flipX ? cursorX - el.offsetWidth - 12 : cursorX + 12) + 'px';
+  const tipH = el.offsetHeight;
+  el.style.top  = Math.max(ca.top, Math.min(cursorY - tipH / 2, ca.bottom - tipH - 4)) + 'px';
+}
+
+const residTsCrosshairPlugin = {
+  id: 'residTsCrosshair',
+  afterEvent(chart, { event }) {
+    if (event.type === 'mouseout') {
+      chart._crosshairY = null;
+      const el = document.getElementById('resid-ts-tooltip');
+      if (el) el.style.opacity = '0';
+    } else {
+      chart._crosshairY = event.y;
+      if (chart.scales?.y) updateResidTsTooltip(chart, event.x, event.y);
+    }
+    chart.draw();
+  },
+  afterDatasetsDraw(chart) {
+    if (chart._crosshairY == null) return;
+    const { ctx, chartArea: { left, right } } = chart;
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.moveTo(left,  chart._crosshairY);
+    ctx.lineTo(right, chart._crosshairY);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+
+// ═══════════════════════════════════════════════
+// Build residuals histogram config
+//   X = residual (inverted, same domain as TS chart)
+//   Y = density (bars grow upward)
+//   No X axis labels (shared axis shown on TS chart below)
+// ═══════════════════════════════════════════════
+function buildResidHistConfig() {
+  const { residTrain, residOot, xMin, xMax } = _residData;
+  const allResid = [...residTrain, ...residOot];
+  const N = 60;
+  const binW    = (xMax - xMin) / N;
+  const nTotal  = allResid.length;
+  const binEdges = Array.from({ length: N + 1 }, (_, i) => xMin + i * binW);
+
+  const trainCounts = new Array(N).fill(0);
+  const ootCounts   = new Array(N).fill(0);
+  residTrain.forEach(v => { trainCounts[Math.max(0, Math.min(N-1, Math.floor((v - xMin) / binW)))]++; });
+  residOot  .forEach(v => { ootCounts  [Math.max(0, Math.min(N-1, Math.floor((v - xMin) / binW)))]++; });
+
+  const trainDens = trainCounts.map(c => c / (nTotal * binW));
+  const totalDens = trainCounts.map((c, i) => (c + ootCounts[i]) / (nTotal * binW));
+
+  // Step-line representation: each bin → left-edge + right-edge at same Y
+  function stepLine(dens) {
+    const pts = [];
+    for (let i = 0; i < N; i++) {
+      pts.push({ x: binEdges[i],   y: dens[i] });
+      pts.push({ x: binEdges[i+1], y: dens[i] });
+    }
+    return pts;
+  }
+
+  // Skewnorm PDF (smooth)
+  const [skA, skLoc, skScale] = S.model.skewnorm_train;
+  const pdfPts = Array.from({ length: 300 }, (_, i) => {
+    const x = xMin + (i / 299) * (xMax - xMin);
+    return { x, y: skewnormPdf(x, skA, skLoc, skScale) };
+  });
+
+  return {
+    type: 'line',
+    data: {
+      datasets: [
+        // Train density fill (from y=0 up to train level)
+        {
+          label: 'up to H4',
+          data: stepLine(trainDens),
+          borderColor: 'rgba(248,122,19,0.75)',
+          backgroundColor: 'rgba(248,122,19,0.5)',
+          borderWidth: 1,
+          pointRadius: 0,
+          tension: 0,
+          fill: 'origin',
+          parsing: false,
+        },
+        // OOT density fill (from train level up to total)
+        {
+          label: 'post H4',
+          data: stepLine(totalDens),
+          borderColor: 'rgba(255,167,80,0.75)',
+          backgroundColor: 'rgba(255,167,80,0.5)',
+          borderWidth: 1,
+          pointRadius: 0,
+          tension: 0,
+          fill: '-1',
+          parsing: false,
+        },
+        // Skewnorm PDF
+        {
+          label: 'skewnorm (train fit)',
+          data: pdfPts,
+          borderColor: 'rgba(150,150,150,0.7)',
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false,
+          parsing: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      layout: { padding: { top: 6, right: 16, bottom: 0, left: 0 } },
+      parsing: false,
+      scales: {
+        x: residXAxis(false),   // no X labels — shared axis shown on TS chart
+        y: {
+          type: 'linear',
+          afterFit: sc => { sc.width = 44; },
+          ticks: { color: '#6e7681', font: { size: 9 }, maxTicksLimit: 4 },
+          grid:   { color: '#1e2430' },
+          border: { color: '#30363d' },
+          title: {
+            display: true,
+            text: 'Density',
+            color: '#6e7681',
+            font: { size: 9 },
+          },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1c2128', borderColor: '#30363d', borderWidth: 1,
+          titleColor: '#e6edf3', titleFont: { size: 10 },
+          bodyColor: '#e6edf3',  bodyFont:  { size: 10 },
+          callbacks: {
+            title: items => `Residual ≈ ${items[0].parsed.x.toFixed(2)}`,
+            label: ctx  => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}`,
+          },
+        },
+      },
+    },
+    plugins: [residVlinesPlugin, residHistLastValuePlugin, residHistQuantileLinesPlugin],
+  };
+}
+
+// ═══════════════════════════════════════════════
+// Build residuals TS datasets
+//   X = residual value,  Y = date timestamp
+//   (rotated 90° CCW from the intuitive time-series orientation)
+// ═══════════════════════════════════════════════
+function buildResidTsDatasets() {
+  const modal = S.model.modal_quantile;
+  const mkey  = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - modal) < 1e-9);
+  const { a: am, b: bm } = S.model.qr_results[mkey];
+
+  const lastPrice = S.prices[S.prices.length - 1].date;
+  const endDate   = new Date(Math.max(
+    new Date(lastPrice).setFullYear(lastPrice.getFullYear() + 1),
+    new Date('2029-01-01').getTime()
+  ));
+  const startTs = new Date('2010-01-01').getTime();
+  const n = S.qKeys.length;
+
+  // Dataset 0: BTC modal residuals {x: residual, y: dateTs}
+  const datasets = [{
+    label: 'BTC residual',
+    data: _residData.btcResid,
+    borderColor: 'rgba(247,147,26,0.85)',
+    borderWidth: 0.6,
+    pointRadius: 0,
+    tension: 0,
+    parsing: false,
+  }];
+
+  // Datasets: per-quantile log-offset from modal {x: offset, y: dateTs}
+  S.qKeys.forEach((q, i) => {
+    if (Math.abs(q - modal) < 1e-9) return;
+    const color = pillColors[q] || coolwarm(n > 1 ? i / (n - 1) : 0.5);
+    const jk    = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q) < 1e-9);
+    if (!jk) return;
+    const { a: aq, b: bq } = S.model.qr_results[jk];
+
+    const pts = [];
+    const cur = new Date('2010-01-01');
+    while (cur <= endDate) {
+      const days = daysSince(cur);
+      if (days > 0) {
+        const offset = Math.log(aq * Math.pow(days, bq)) - Math.log(am * Math.pow(days, bm));
+        pts.push({ x: offset, y: cur.getTime() });
+      }
+      cur.setDate(cur.getDate() + 7);
+    }
+
+    datasets.push({
+      label: `q=${q.toFixed(3)}`,
+      data: pts,
+      borderColor: color,
+      borderWidth: 0.9,
+      pointRadius: 0,
+      tension: 0,
+      parsing: false,
+      segment: { borderDash: ctx => ctx.p0.parsed.y >= H4_TS ? [5, 4] : undefined },
+    });
+  });
+
+  return datasets;
+}
+
+// ═══════════════════════════════════════════════
+// Build residuals TS config
+//   X = residual (inverted, shared with histogram)
+//   Y = date (linear scale with timestamp values)
+// ═══════════════════════════════════════════════
+function buildResidTsConfig() {
+  const dateMin = S.prices[0].date.getTime();
+  const _today30 = new Date(); _today30.setDate(_today30.getDate() + 30);
+  const dateMax = _today30.getTime();
+
+  return {
+    type: 'line',
+    data: { datasets: buildResidTsDatasets() },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      layout: { padding: { top: 0, right: 16, bottom: 0, left: 0 } },
+      parsing: false,
+      scales: {
+        x: residXAxis(true),   // show X labels here (shared axis)
+        y: {
+          type: 'linear',
+          min: dateMin,
+          max: dateMax,
+          afterFit: sc => { sc.width = 44; },
+          ticks: {
+            color: '#6e7681',
+            font: { size: 10 },
+            maxTicksLimit: 8,
+            callback: v => new Date(v).getFullYear(),
+          },
+          grid:   { color: '#1e2430' },
+          border: { color: '#30363d' },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+      },
+    },
+    plugins: [tsHalvingsPlugin, residVlinesPlugin, residTsCrosshairPlugin],
+  };
+}
+
+// ═══════════════════════════════════════════════
+// Build price chart datasets
+// ═══════════════════════════════════════════════
+function buildPriceDatasets() {
+  const n = S.qKeys.length;
+  const lastPrice = S.prices[S.prices.length - 1].date;
+  const endDate   = new Date(Math.max(
+    new Date(lastPrice).setFullYear(lastPrice.getFullYear() + 1),
+    new Date('2029-01-01').getTime()
+  ));
+
+  const datasets = [{
+    label: 'BTC',
+    data: S.prices.map(d => ({ x: d.date.getTime(), y: d.price })),
+    borderColor: 'rgba(247,147,26,0.9)', borderWidth: 1.3,
+    pointRadius: 0, tension: 0, parsing: false,
+  }];
+
+  S.qKeys.forEach((q, i) => {
+    const color   = pillColors[q] || coolwarm(n > 1 ? i / (n - 1) : 0.5);
+    const isModal = Math.abs(q - S.model.modal_quantile) < 1e-9;
+    const jk      = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q) < 1e-9);
+    const { a, b } = S.model.qr_results[jk];
+    const pts = [];
+    const cur = new Date('2010-01-01');
+    while (cur <= endDate) {
+      const days = daysSince(cur);
+      if (days > 0) pts.push({ x: cur.getTime(), y: powerPrice(days, a, b) });
+      cur.setDate(cur.getDate() + 7);
+    }
+    datasets.push({
+      label: `q=${q.toFixed(3)}`,
+      data: pts,
+      borderColor: color, borderWidth: 1.1,
+      pointRadius: 0, tension: 0, parsing: false,
+      segment: { borderDash: ctx => ctx.p0.parsed.x >= H4_TS ? [5, 4] : undefined },
+    });
+  });
+  return datasets;
+}
+
+// ═══════════════════════════════════════════════
+// Build price chart config
+// ═══════════════════════════════════════════════
+function buildPriceConfig() {
+  const isLog = S.scale === 'log';
+  return {
+    type: 'line',
+    data: { datasets: buildPriceDatasets() },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      layout: { padding: { top: 6, right: 16 } },
+      parsing: false,
+      scales: {
+        x: {
+          type: 'time',
+          min: S.range ? new Date(S.range.start).getTime() : undefined,
+          max: S.range ? new Date(S.range.end).getTime()   : undefined,
+          time: { displayFormats: { year: 'yyyy', month: 'MMM yyyy', quarter: 'MMM yyyy' } },
+          ticks: { color: '#6e7681', font: { size: 10 }, maxTicksLimit: 12 },
+          grid: { color: '#1e2430' }, border: { color: '#30363d' },
+        },
+        y: {
+          type: isLog ? 'logarithmic' : 'linear',
+          min: S.yRange?.[0], max: S.yRange?.[1],
+          afterFit: sc => { sc.width = 65; },
+          ticks: { color: '#6e7681', font: { size: 10 }, callback: fmtAxisTick },
+          grid: { color: '#1e2430' }, border: { color: '#30363d' },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+      },
+    },
+    plugins: [halvingPlugin, crosshairPlugin],
+  };
+}
+
+// ═══════════════════════════════════════════════
+// Render functions
+// ═══════════════════════════════════════════════
+function renderResidHist() {
+  if (_residHistChart) { _residHistChart.destroy(); _residHistChart = null; }
+  el('resid-hist-canvas').style.display = 'block';
+  _residHistChart = new Chart(el('resid-hist-canvas'), buildResidHistConfig());
+}
+
+function renderResidTs() {
+  if (_residTsChart) { _residTsChart.destroy(); _residTsChart = null; }
+  const oldTip = document.getElementById('resid-ts-tooltip');
+  if (oldTip) oldTip.remove();
+  el('resid-ts-canvas').style.display = 'block';
+  _residTsChart = new Chart(el('resid-ts-canvas'), buildResidTsConfig());
+}
+
+function renderPrice() {
+  if (_chart) { _chart.destroy(); _chart = null; }
+  const oldTip = document.getElementById('price-tooltip');
+  if (oldTip) oldTip.remove();
+  el('overlay').style.display      = 'none';
+  el('price-canvas').style.display = 'block';
+  _chart = new Chart(el('price-canvas'), buildPriceConfig());
+}
+
+function renderAll() {
+  renderResidHist();
+  renderResidTs();
+  renderPrice();
+  S.rendered = true;
+}
+
+// ═══════════════════════════════════════════════
+// Resize (debounced)
+// ═══════════════════════════════════════════════
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    [_residHistChart, _residTsChart, _chart].forEach(c => { if (c) c.resize(); });
+  }, 100);
+});
+
+loadData();
+</script>
+</body>
+</html>
