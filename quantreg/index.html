@@ -735,7 +735,8 @@ function updatePriceTooltip(chart, cursorPx) {
 const crosshairPlugin = {
   id: 'crosshair',
   afterEvent(chart, { event }) {
-    if (event.type === 'mouseout') {
+    const nt = event.native?.type;
+    if (event.type === 'mouseout' || nt === 'touchend' || nt === 'touchcancel') {
       chart._crosshairX = null;
       const el = document.getElementById('price-tooltip');
       if (el) el.style.opacity = '0';
@@ -823,7 +824,8 @@ function updateResidTsTooltip(chart, cursorX, cursorY) {
 const residTsCrosshairPlugin = {
   id: 'residTsCrosshair',
   afterEvent(chart, { event }) {
-    if (event.type === 'mouseout') {
+    const nt = event.native?.type;
+    if (event.type === 'mouseout' || nt === 'touchend' || nt === 'touchcancel') {
       chart._crosshairY = null;
       const el = document.getElementById('resid-ts-tooltip');
       if (el) el.style.opacity = '0';
