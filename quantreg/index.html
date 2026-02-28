@@ -48,6 +48,11 @@ body {
 #load-status { margin-left: auto; font-size: 11px; color: var(--muted); }
 
 /* ── Chart sections ── */
+#charts-wrap {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
 #resid-wrap {
   height: 100vh;
   flex-shrink: 0;
@@ -68,6 +73,26 @@ body {
   height: 50vh;
   flex-shrink: 0;
   position: relative;
+}
+
+@media (min-width: 900px) {
+  body {
+    height: 100vh;
+    overflow: hidden;
+  }
+  #charts-wrap {
+    flex: 1;
+    flex-direction: row;
+    min-height: 0;
+  }
+  #resid-wrap {
+    flex: 0 0 33.333%;
+    height: auto;
+  }
+  #chart-wrap {
+    flex: 1;
+    height: auto;
+  }
 }
 #resid-hist-wrap canvas,
 #resid-ts-wrap   canvas,
@@ -161,6 +186,9 @@ body {
   <span id="load-status">Loading&#8230;</span>
 </div>
 
+<!-- ═══ CHARTS ROW ═══ -->
+<div id="charts-wrap">
+
 <!-- ═══ RESIDUALS SECTION (top) ═══ -->
 <div id="resid-wrap">
   <!-- ax1: density histogram — X=residual (inverted), Y=density (bars up, no X labels) -->
@@ -172,6 +200,20 @@ body {
     <canvas id="resid-ts-canvas"></canvas>
   </div>
 </div>
+
+<!-- ═══ PRICE SECTION (right on desktop / bottom on mobile) ═══ -->
+<div id="chart-wrap">
+  <div class="overlay" id="overlay">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#7d8590" stroke-width="1.2">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <h2 id="overlay-title">Loading data&#8230;</h2>
+    <p id="overlay-msg">Fetching combined.csv and quant_results.json</p>
+  </div>
+  <canvas id="price-canvas" style="display:none"></canvas>
+</div>
+
+</div><!-- end #charts-wrap -->
 
 <!-- ═══ SHARED CONTROLS ═══ -->
 <div class="controls">
@@ -189,18 +231,6 @@ body {
     </div>
     <span class="ctrl-note">(price)</span>
   </div>
-</div>
-
-<!-- ═══ PRICE SECTION (bottom) ═══ -->
-<div id="chart-wrap">
-  <div class="overlay" id="overlay">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#7d8590" stroke-width="1.2">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-    </svg>
-    <h2 id="overlay-title">Loading data&#8230;</h2>
-    <p id="overlay-msg">Fetching combined.csv and quant_results.json</p>
-  </div>
-  <canvas id="price-canvas" style="display:none"></canvas>
 </div>
 
 <script>
