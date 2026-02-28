@@ -538,7 +538,6 @@ const residVlinesPlugin = {
     const { ctx, chartArea: { left, top, right, bottom }, scales: { x } } = chart;
     ctx.save();
     [
-      { val: 0,                  color: '#3fb950', lbl: '0'    },
       { val: S.model.mode_train, color: pillColors[S.model.modal_quantile] || '#f85149', lbl: '' },
     ].forEach(({ val, color, lbl }) => {
       const px = x.getPixelForValue(val);
