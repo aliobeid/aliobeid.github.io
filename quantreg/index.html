@@ -572,11 +572,27 @@ const residVlinesPlugin = {
     ].forEach(({ val, color, lbl }) => {
       const px = x.getPixelForValue(val);
       if (px < left || px > right) return;
-      ctx.beginPath();
       ctx.strokeStyle = color; ctx.lineWidth = 1.4;
-      ctx.setLineDash([4, 3]);
-      ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
-      ctx.setLineDash([]);
+
+      const yScale = chart.scales.y;
+      const isDateY = yScale && yScale.min > 9e11;
+      if (isDateY) {
+        const h4Py = yScale.getPixelForValue(H4_TS);
+        // solid from bottom up to H4
+        ctx.beginPath(); ctx.setLineDash([]);
+        ctx.moveTo(px, bottom); ctx.lineTo(px, Math.max(h4Py, top)); ctx.stroke();
+        // dotted from H4 to top
+        if (h4Py > top) {
+          ctx.beginPath(); ctx.setLineDash([4, 3]);
+          ctx.moveTo(px, h4Py); ctx.lineTo(px, top); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      } else {
+        ctx.beginPath(); ctx.setLineDash([4, 3]);
+        ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
       ctx.font = '8.5px system-ui,sans-serif';
       ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       ctx.fillText(lbl, px, top + 3);
