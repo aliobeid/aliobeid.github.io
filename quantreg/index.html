@@ -464,6 +464,7 @@ const pillColors = {};
 function buildColors() {
   const n = S.qKeys.length;
   S.qKeys.forEach((q, i) => { pillColors[q] = coolwarm(n > 1 ? i / (n - 1) : 0.5); });
+  if (pillColors[0.236] !== undefined) pillColors[0.236] = 'rgba(80,85,92,0.82)';
 }
 
 // ═══════════════════════════════════════════════
@@ -526,7 +527,7 @@ function setView(v) {
   S.cloudMode = (v === 'cloud');
   el('vw-lines').classList.toggle('active', !S.cloudMode);
   el('vw-cloud').classList.toggle('active',  S.cloudMode);
-  if (S.rendered) { renderPrice(); renderResidTs(); }
+  if (S.rendered) { renderPrice(); }
 }
 
 // ═══════════════════════════════════════════════
