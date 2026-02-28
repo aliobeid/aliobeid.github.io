@@ -27,7 +27,7 @@ body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -54,7 +54,7 @@ body {
   flex-shrink: 0;
 }
 #resid-wrap {
-  height: 100vh;
+  height: 100svh;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -70,7 +70,7 @@ body {
   position: relative;
 }
 #chart-wrap {
-  height: 50vh;
+  height: 50svh;
   flex-shrink: 0;
   position: relative;
 }
@@ -78,7 +78,7 @@ body {
 
 @media (min-width: 900px) {
   body {
-    height: 100vh;
+    height: 100svh;
     overflow: hidden;
   }
   #charts-wrap {
@@ -959,7 +959,7 @@ function buildResidHistConfig() {
       datasets: [
         // Train density fill (from y=0 up to train level)
         {
-          label: 'up to H4',
+          label: 'Pre 4th Halving',
           data: stepLine(trainDens),
           borderColor: 'rgba(248,122,19,0.75)',
           backgroundColor: 'rgba(248,122,19,0.5)',
@@ -971,7 +971,7 @@ function buildResidHistConfig() {
         },
         // OOT density fill (from train level up to total)
         {
-          label: 'post H4',
+          label: 'Post 4th Halving',
           data: stepLine(totalDens),
           borderColor: 'rgba(255,167,80,0.75)',
           backgroundColor: 'rgba(255,167,80,0.5)',
@@ -1018,16 +1018,18 @@ function buildResidHistConfig() {
         },
       },
       plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#1c2128', borderColor: '#30363d', borderWidth: 1,
-          titleColor: '#e6edf3', titleFont: { size: 10 },
-          bodyColor: '#e6edf3',  bodyFont:  { size: 10 },
-          callbacks: {
-            title: items => `Residual ≈ ${items[0].parsed.x.toFixed(2)}`,
-            label: ctx  => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}`,
+        legend: {
+          display: true,
+          labels: {
+            color: '#7d8590',
+            font: { size: 9 },
+            boxWidth: 10,
+            boxHeight: 8,
+            padding: 10,
+            filter: item => item.datasetIndex < 2,
           },
         },
+        tooltip: { enabled: false },
       },
     },
     plugins: [residVlinesPlugin, residHistLastValuePlugin, residHistQuantileLinesPlugin],
