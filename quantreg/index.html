@@ -230,6 +230,12 @@ body {
       <button class="btn"        id="sc-lin" onclick="setScale('linear')">Linear</button>
     </div>
     <span class="ctrl-note">(price)</span>
+    <div class="vdiv"></div>
+    <span class="ctrl-label">View</span>
+    <div class="btn-group">
+      <button class="btn active" id="vw-lines" onclick="setView('lines')">Lines</button>
+      <button class="btn"        id="vw-cloud" onclick="setView('cloud')">Cloud</button>
+    </div>
   </div>
 </div>
 
@@ -269,6 +275,7 @@ const S = {
   range:    null,
   yRange:   null,
   rendered: false,
+  cloudMode: false,
 };
 
 let _residData = null;
@@ -325,6 +332,7 @@ function skewnormCdf(x, a, loc, scale) {
   }
   return Math.min(1, Math.max(0, sum * h / 3));
 }
+
 
 // ═══════════════════════════════════════════════
 // Compute residuals + X domain (called once)
@@ -474,9 +482,10 @@ function initRange() {
     endSel.innerHTML   += `<option value="${y}">${y}</option>`;
   }
   const defaultSy = Math.max(fy, new Date().getFullYear() - 5);
+  const defaultEy = new Date().getFullYear();
   startSel.value = defaultSy;
-  endSel.value   = ly;
-  S.range  = yearRange(defaultSy, ly);
+  endSel.value   = defaultEy;
+  S.range  = yearRange(defaultSy, defaultEy);
   S.yRange = computeYRange();
 }
 
@@ -511,6 +520,13 @@ function setScale(sc) {
   el('sc-lin').classList.toggle('active', sc === 'linear');
   S.yRange = computeYRange();
   if (S.rendered) renderPrice();
+}
+
+function setView(v) {
+  S.cloudMode = (v === 'cloud');
+  el('vw-lines').classList.toggle('active', !S.cloudMode);
+  el('vw-cloud').classList.toggle('active',  S.cloudMode);
+  if (S.rendered) { renderPrice(); renderResidTs(); }
 }
 
 // ═══════════════════════════════════════════════
@@ -1045,36 +1061,31 @@ function buildResidTsDatasets() {
     parsing: false,
   }];
 
-  // Datasets: per-quantile log-offset from modal {x: offset, y: dateTs}
-  S.qKeys.forEach((q, i) => {
-    if (Math.abs(q - modal) < 1e-9) return;
-    const color = pillColors[q] || coolwarm(n > 1 ? i / (n - 1) : 0.5);
-    const jk    = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q) < 1e-9);
-    if (!jk) return;
-    const { a: aq, b: bq } = S.model.qr_results[jk];
-
-    const pts = [];
-    const cur = new Date('2010-01-01');
-    while (cur <= endDate) {
-      const days = daysSince(cur);
-      if (days > 0) {
-        const offset = Math.log(aq * Math.pow(days, bq)) - Math.log(am * Math.pow(days, bm));
-        pts.push({ x: offset, y: cur.getTime() });
+  {
+    // Datasets: per-quantile log-offset from modal {x: offset, y: dateTs}
+    S.qKeys.forEach((q, i) => {
+      if (Math.abs(q - modal) < 1e-9) return;
+      const jk = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q) < 1e-9);
+      if (!jk) return;
+      const { a: aq, b: bq } = S.model.qr_results[jk];
+      const pts = []; const cur = new Date('2010-01-01');
+      while (cur <= endDate) {
+        const days = daysSince(cur);
+        if (days > 0) {
+          const offset = Math.log(aq * Math.pow(days, bq)) - Math.log(am * Math.pow(days, bm));
+          pts.push({ x: offset, y: cur.getTime() });
+        }
+        cur.setDate(cur.getDate() + 7);
       }
-      cur.setDate(cur.getDate() + 7);
-    }
-
-    datasets.push({
-      label: `q=${q.toFixed(3)}`,
-      data: pts,
-      borderColor: color,
-      borderWidth: 0.9,
-      pointRadius: 0,
-      tension: 0,
-      parsing: false,
-      segment: { borderDash: ctx => ctx.p0.parsed.y >= H4_TS ? [5, 4] : undefined },
+      const color = pillColors[q] || coolwarm(n > 1 ? i / (n - 1) : 0.5);
+      datasets.push({
+        label: `q=${q.toFixed(3)}`, data: pts,
+        borderColor: color, borderWidth: 0.9,
+        pointRadius: 0, tension: 0, parsing: false,
+        segment: { borderDash: ctx => ctx.p0.parsed.y >= H4_TS ? [5, 4] : undefined },
+      });
     });
-  });
+  }
 
   return datasets;
 }
@@ -1125,6 +1136,77 @@ function buildResidTsConfig() {
 }
 
 // ═══════════════════════════════════════════════
+// Cloud band helper — shared by price and resid-TS charts
+// ═══════════════════════════════════════════════
+// buildPts(a, b) → array of {x,y} points for one quantile line.
+// Each model interval is subdivided into N thin sub-bands (log-interp a, linear-interp b)
+// so the color gradient transitions smoothly instead of jumping between 5 discrete levels.
+// Green (q0.01 → modal): brightest at the low tail, fades to transparent at modal.
+// Red  (modal → q0.99): fades in from transparent at modal, brightest at the high tail.
+function buildCloudBands(buildPts) {
+  const modal  = S.model.modal_quantile;
+  const sorted = [...S.qKeys].sort((a, b) => a - b);
+  const qMin   = sorted[0];
+  const qMax   = sorted[sorted.length - 1];
+  const N      = 8;        // sub-bands per model interval
+  const maxAlpha = 0.55;
+
+  // Build interpolated levels: [{q, a, b}, ...]
+  const levels = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const q0  = sorted[i];
+    const jk0 = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q0) < 1e-9);
+    const { a: a0, b: b0 } = S.model.qr_results[jk0];
+    if (i === 0) levels.push({ q: q0, a: a0, b: b0 });
+    if (i < sorted.length - 1) {
+      const q1  = sorted[i + 1];
+      const jk1 = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q1) < 1e-9);
+      const { a: a1, b: b1 } = S.model.qr_results[jk1];
+      for (let k = 1; k <= N; k++) {
+        const t = k / N;
+        levels.push({
+          q: q0 + t * (q1 - q0),
+          a: Math.exp((1 - t) * Math.log(a0) + t * Math.log(a1)),
+          b: (1 - t) * b0 + t * b1,
+        });
+      }
+    }
+  }
+
+  return levels.map(({ q, a, b }, i) => {
+    const pts     = buildPts(a, b);
+    const isModal = Math.abs(q - modal) < 1e-9;
+    const border  = isModal ? 'rgba(200,200,200,0.6)' : 'rgba(0,0,0,0)';
+    const bWidth  = isModal ? 0.8 : 0;
+
+    if (i === 0) {
+      return { label: `q=${q.toFixed(3)}`, data: pts, borderColor: border,
+               borderWidth: bWidth, pointRadius: 0, tension: 0, parsing: false, fill: false };
+    }
+    const qMid = (levels[i - 1].q + q) / 2;
+    let bgColor;
+    if (qMid >= 0.4) {
+      // Above 0.4 → red, transparent at 0.4, brightest at qMax
+      const t = (qMid - 0.4) / (qMax - 0.4);
+      bgColor = `rgba(220,60,60,${(Math.max(0, t) * maxAlpha).toFixed(3)})`;
+    } else if (qMid > 0.1) {
+      // Between 0.1 and modal → no green
+      bgColor = 'rgba(0,0,0,0)';
+    } else {
+      // Below 0.1 → green, brightest at qMin (0.001), fades to 0 at 0.1
+      const t = (0.1 - qMid) / (0.1 - qMin);
+      bgColor = `rgba(40,180,80,${(Math.max(0, t) * maxAlpha).toFixed(3)})`;
+    }
+    return {
+      label: `q=${q.toFixed(3)}`, data: pts,
+      borderColor: border, borderWidth: bWidth,
+      pointRadius: 0, tension: 0, parsing: false,
+      fill: '-1', backgroundColor: bgColor,
+    };
+  });
+}
+
+// ═══════════════════════════════════════════════
 // Build price chart datasets
 // ═══════════════════════════════════════════════
 function buildPriceDatasets() {
@@ -1142,26 +1224,36 @@ function buildPriceDatasets() {
     pointRadius: 0, tension: 0, parsing: false,
   }];
 
-  S.qKeys.forEach((q, i) => {
-    const color   = pillColors[q] || coolwarm(n > 1 ? i / (n - 1) : 0.5);
-    const isModal = Math.abs(q - S.model.modal_quantile) < 1e-9;
-    const jk      = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q) < 1e-9);
-    const { a, b } = S.model.qr_results[jk];
-    const pts = [];
-    const cur = new Date('2010-01-01');
-    while (cur <= endDate) {
-      const days = daysSince(cur);
-      if (days > 0) pts.push({ x: cur.getTime(), y: powerPrice(days, a, b) });
-      cur.setDate(cur.getDate() + 7);
-    }
-    datasets.push({
-      label: `q=${q.toFixed(3)}`,
-      data: pts,
-      borderColor: color, borderWidth: 1.1,
-      pointRadius: 0, tension: 0, parsing: false,
-      segment: { borderDash: ctx => ctx.p0.parsed.x >= H4_TS ? [5, 4] : undefined },
+  if (S.cloudMode) {
+    const pricePts = (a, b) => {
+      const pts = []; const cur = new Date('2010-01-01');
+      while (cur <= endDate) {
+        const days = daysSince(cur);
+        if (days > 0) pts.push({ x: cur.getTime(), y: powerPrice(days, a, b) });
+        cur.setDate(cur.getDate() + 14);
+      }
+      return pts;
+    };
+    datasets.push(...buildCloudBands(pricePts));
+  } else {
+    S.qKeys.forEach((q, i) => {
+      const color   = pillColors[q] || coolwarm(n > 1 ? i / (n - 1) : 0.5);
+      const jk      = Object.keys(S.model.qr_results).find(k => Math.abs(Number(k) - q) < 1e-9);
+      const { a, b } = S.model.qr_results[jk];
+      const pts = []; const cur = new Date('2010-01-01');
+      while (cur <= endDate) {
+        const days = daysSince(cur);
+        if (days > 0) pts.push({ x: cur.getTime(), y: powerPrice(days, a, b) });
+        cur.setDate(cur.getDate() + 7);
+      }
+      datasets.push({
+        label: `q=${q.toFixed(3)}`, data: pts,
+        borderColor: color, borderWidth: 1.1,
+        pointRadius: 0, tension: 0, parsing: false,
+        segment: { borderDash: ctx => ctx.p0.parsed.x >= H4_TS ? [5, 4] : undefined },
+      });
     });
-  });
+  }
   return datasets;
 }
 
