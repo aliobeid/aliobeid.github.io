@@ -44,6 +44,7 @@ h2 {
 .cv-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 .cv-table td {
     padding: 0.4rem 0;
@@ -57,7 +58,10 @@ h2 {
     font-size: 0.85rem;
 }
 .cv-table .title {
+    width: 45%;
     font-weight: normal;
+    font-family: var(--sans);
+    font-size: 0.85rem;
 }
 .cv-table .org {
     color: var(--muted);

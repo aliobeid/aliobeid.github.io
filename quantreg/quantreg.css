@@ -1,28 +1,13 @@
-/* Demo overrides — forced dark theme for dashboard */
+/* Dashboard extras — inherits --bg, --text, etc. from shared/style.css */
 :root {
-  --bg:      #0d1117;
-  --bg-alt:  #161b22;
-  --panel:   #161b22;
-  --panel2:  #1c2128;
-  --border:  #30363d;
-  --text:    #e6edf3;
-  --muted:   #7d8590;
+  --panel2:  #f0f0f0;
   --accent:  #f7931a;
-  --blue:    #58a6ff;
-  --link:    #58a6ff;
+  --blue:    #1a5276;
 }
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   :root {
-    --bg:      #0d1117;
-    --bg-alt:  #161b22;
-    --panel:   #161b22;
-    --panel2:  #1c2128;
-    --border:  #30363d;
-    --text:    #e6edf3;
-    --muted:   #7d8590;
-    --accent:  #f7931a;
+    --panel2:  #1c1c1c;
     --blue:    #58a6ff;
-    --link:    #58a6ff;
   }
 }
 
@@ -35,13 +20,6 @@ body {
   flex-direction: column;
   overflow-y: auto;
 }
-
-.site-nav {
-  background: var(--panel);
-}
-.site-nav-name { color: var(--text); }
-.site-nav-links a { color: var(--muted); }
-.site-nav-links a:hover { color: var(--text); }
 
 /* ── Nav tweaks ── */
 .site-nav { flex-shrink: 0; }
@@ -116,7 +94,7 @@ body {
 }
 .ctrl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 28px; }
 .ctrl-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; min-width: 48px; }
-.ctrl-note  { font-size: 9px; color: #484f58; font-style: italic; }
+.ctrl-note  { font-size: 9px; color: var(--muted); font-style: italic; }
 .vdiv { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
 
 .btn {
@@ -128,10 +106,10 @@ body {
   font-size: 11px;
   cursor: pointer;
   transition: all 0.15s;
-  font-family: var(--font);
+  font-family: var(--sans);
   white-space: nowrap;
 }
-.btn:hover { background: #262c36; color: var(--text); border-color: #484f58; }
+.btn:hover { background: var(--bg-alt); color: var(--text); border-color: var(--muted); }
 .btn.active      { background: rgba(247,147,26,.12); border-color: var(--accent); color: var(--accent); }
 .btn.active-blue { background: rgba(88,166,255,.10);  border-color: var(--blue);   color: var(--blue);   }
 .btn-group { display: flex; gap: 2px; }
@@ -146,7 +124,7 @@ body {
   border-radius: 5px;
   color: var(--text);
   font-size: 11px;
-  font-family: var(--font);
+  font-family: var(--sans);
   width: 110px;
 }
 .date-in:focus { outline: none; border-color: var(--blue); }
@@ -174,4 +152,4 @@ body {
 }
 .overlay svg { opacity: 0.18; }
 .overlay h2 { font-size: 15px; font-weight: 500; color: var(--muted); }
-.overlay p  { font-size: 12px; color: #484f58; max-width: 320px; text-align: center; line-height: 1.6; }
+.overlay p  { font-size: 12px; color: var(--muted); max-width: 320px; text-align: center; line-height: 1.6; }
