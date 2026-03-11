@@ -92,7 +92,7 @@ body {
   gap: 5px;
   flex-shrink: 0;
 }
-.ctrl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 28px; }
+.ctrl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 28px; justify-content: flex-end; }
 .ctrl-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; min-width: 48px; }
 .ctrl-note  { font-size: 9px; color: var(--muted); font-style: italic; }
 .vdiv { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }

@@ -642,7 +642,7 @@ function updatePriceTooltip(chart, cursorPx) {
 
     if (di === 0) {
       if (cursorTs > lastBtcTs) return;        // cursor is in the future — hide BTC price
-      rows.push({ y: pt.y, html: tooltipRow(ds.borderColor, `\u20bf BTC: ${fmtPrice(pt.y)}`) });
+      rows.push({ y: pt.y, html: tooltipRow(ds.borderColor, `Price: ${fmtPrice(pt.y)}`) });
     } else {
       const q = S.qKeys[di - 1];
       rows.push({ y: pt.y, html: tooltipRow(ds.borderColor, `q=${q.toFixed(3)}: ${fmtPrice(pt.y)}`) });
