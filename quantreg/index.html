@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Probabilistic Price Density - Ali Obeid</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/shared/style.css">
+<link rel="stylesheet" href="/shared/style.css?v=2">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -120,12 +120,15 @@ let _residData = null;
 // ═══════════════════════════════════════════════
 const el = id => document.getElementById(id);
 const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-let C_GRID, C_BORDER, C_MUTED;
+let C_GRID, C_BORDER, C_MUTED, C_LABEL_BG;
 function loadThemeColors() {
   C_BORDER = cssVar('--border');
   C_MUTED  = cssVar('--muted');
   // grid: slightly lighter/darker than bg for subtle lines
   C_GRID   = cssVar('--bg-alt');
+  // halving label pill background — opaque chip matching the panel
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  C_LABEL_BG = dark ? 'rgba(13,17,23,0.65)' : 'rgba(240,240,240,0.85)';
 }
 function daysSince(d)           { return (d - GENESIS) / 86400000; }
 function powerPrice(days, a, b) { return a * Math.pow(days, b); }
@@ -564,7 +567,7 @@ const tsHalvingsPlugin = {
       ctx.setLineDash([]);
       ctx.font = '9px system-ui,sans-serif';
       const tw = ctx.measureText(hv.label).width;
-      ctx.fillStyle = 'rgba(13,17,23,0.65)';
+      ctx.fillStyle = C_LABEL_BG;
       ctx.fillRect(left + 3, yPx - 8, tw + 6, 13);
       ctx.fillStyle    = 'rgba(120,130,160,0.65)';
       ctx.textAlign    = 'left'; ctx.textBaseline = 'middle';
@@ -593,7 +596,7 @@ const halvingPlugin = {
       ctx.setLineDash([]);
       ctx.font = '9px system-ui,sans-serif';
       const tw = ctx.measureText(hv.label).width;
-      ctx.fillStyle = 'rgba(13,17,23,0.65)';
+      ctx.fillStyle = C_LABEL_BG;
       ctx.fillRect(xPx - tw/2 - 3, top + 3, tw + 6, 14);
       ctx.fillStyle    = 'rgba(120,130,160,0.65)';
       ctx.textAlign    = 'center'; ctx.textBaseline = 'top';

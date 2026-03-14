@@ -82,6 +82,44 @@ a:hover {
   text-decoration: none;
 }
 
+/* ── Shared interactive variables ── */
+:root {
+  --panel2:  #f0f0f0;
+  --btn-accent: #f7931a;
+  --blue:    #1a5276;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --panel2:  #1c1c1c;
+    --blue:    #58a6ff;
+  }
+}
+
+/* ── Shared controls ── */
+.ctrl-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+.ctrl-sep   { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+
+.btn {
+  padding: 4px 10px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--sans);
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:hover { background: var(--bg-alt); color: var(--text); border-color: var(--muted); }
+.btn.active      { background: rgba(247,147,26,.12); border-color: var(--btn-accent); color: var(--btn-accent); }
+.btn.active-blue { background: rgba(88,166,255,.10);  border-color: var(--blue);       color: var(--blue); }
+.btn-group { display: flex; gap: 2px; }
+.btn-group .btn             { border-radius: 0; }
+.btn-group .btn:first-child { border-radius: 5px 0 0 5px; }
+.btn-group .btn:last-child  { border-radius: 0 5px 5px 0; }
+
 /* ── Site footer ── */
 .site-footer {
   border-top: 1px solid var(--border);

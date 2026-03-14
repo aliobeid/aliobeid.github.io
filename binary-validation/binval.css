@@ -1,0 +1,236 @@
+/* Binary Validation article — inherits vars + .btn from /shared/style.css */
+
+/* ── Article prose ── */
+.article {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 1rem;
+  line-height: 1.75;
+}
+.article h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  line-height: 1.25;
+}
+.article .subtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+  font-family: var(--sans);
+}
+.article h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 2.5rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+}
+.article h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+}
+.article p {
+  margin: 0.75rem 0;
+}
+.article ul, .article ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+.article li {
+  margin: 0.3rem 0;
+}
+.article code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--bg-alt, var(--panel));
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+}
+
+/* ── Math blocks ── */
+.math-block {
+  overflow-x: auto;
+  margin: 1rem 0;
+  text-align: center;
+}
+
+/* ── Confusion matrix table ── */
+.cm-table {
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  margin: 1rem auto;
+}
+.cm-table th, .cm-table td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.75rem;
+  text-align: center;
+}
+.cm-table th {
+  background: var(--bg-alt, var(--panel));
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ── Interactive dashboard ── */
+.dashboard {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Controls bar */
+.controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+/* Charts grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 640px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.chart-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  position: relative;
+}
+.chart-card h4 {
+  margin: 0 0 0.5rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.chart-card canvas {
+  width: 100% !important;
+  height: 250px !important;
+}
+
+/* Decision boundary — full width above grid, square */
+.chart-card.full-width {
+  margin-bottom: 1.25rem;
+}
+.db-square {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  position: relative;
+}
+.db-square canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── Metrics table ── */
+.metrics-wrap {
+  margin-top: 1.25rem;
+}
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+}
+.metrics-table th, .metrics-table td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  text-align: center;
+}
+.metrics-table th {
+  background: var(--bg-alt, var(--panel));
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.metrics-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+.metrics-table tr.better td {
+  /* subtle highlight for better metric */
+}
+.val-good {
+  color: var(--green);
+  font-weight: 600;
+}
+.val-bad {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* ── Confusion matrix visual ── */
+.cm-grid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  grid-template-rows: auto 1fr 1fr;
+  gap: 2px;
+  max-width: 260px;
+  margin: 0 auto;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+}
+.cm-header {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.cm-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  min-height: 60px;
+}
+.cm-cell .cm-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.cm-tp { background: rgba(34,197,94,0.12); color: var(--green); }
+.cm-tn { background: rgba(59,130,246,0.10); color: var(--c1); }
+.cm-fp { background: rgba(239,68,68,0.10); color: var(--red); }
+.cm-fn { background: rgba(245,158,11,0.10); color: var(--c2); }
+
+/* ── Footer ── */
+.article-footer {
+  max-width: 740px;
+  margin: 3rem auto 0;
+  padding: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
