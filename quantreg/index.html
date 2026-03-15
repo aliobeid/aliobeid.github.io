@@ -59,6 +59,10 @@
     <select id="y-end" class="date-in" onchange="applyYearRange()" style="width:72px"></select>
 
     <div class="vdiv"></div>
+    <span class="ctrl-label">Bins</span>
+    <input id="hist-bins" type="text" inputmode="numeric" class="date-in" value="100" style="width:52px" onchange="applyBins()">
+
+    <div class="vdiv"></div>
     <span class="ctrl-label">Scale</span>
     <div class="btn-group">
       <button class="btn active" id="sc-log" onclick="setScale('log')">Log</button>
@@ -328,7 +332,7 @@ function initRange() {
     startSel.innerHTML += `<option value="${y}">${y}</option>`;
     endSel.innerHTML   += `<option value="${y}">${y}</option>`;
   }
-  const defaultSy = Math.max(fy, new Date().getFullYear() - 5);
+  const defaultSy = Math.max(fy, 2013);
   const defaultEy = new Date().getFullYear();
   startSel.value = defaultSy;
   endSel.value   = defaultEy;
@@ -348,6 +352,18 @@ function _applyRangeToCharts() {
     if (S.yRange) { _chart.options.scales.y.min = S.yRange[0]; _chart.options.scales.y.max = S.yRange[1]; }
     _chart.update('none');
   }
+
+  // Resid TS chart: date is on Y axis
+  if (_residTsChart) {
+    _residTsChart.options.scales.y.min = dateMin;
+    _residTsChart.options.scales.y.max = dateMax;
+    _residTsChart.update('none');
+  }
+
+  // Histogram: rebuild with filtered residuals
+  if (_residHistChart) {
+    renderResidHist();
+  }
 }
 
 function applyYearRange() {
@@ -356,6 +372,10 @@ function applyYearRange() {
   S.range = yearRange(sy, ey);
   S.yRange = computeYRange();
   if (S.rendered) _applyRangeToCharts();
+}
+
+function applyBins() {
+  if (S.rendered && _residHistChart) renderResidHist();
 }
 
 // ═══════════════════════════════════════════════
@@ -791,9 +811,16 @@ const residTsCrosshairPlugin = {
 //   No X axis labels (shared axis shown on TS chart below)
 // ═══════════════════════════════════════════════
 function buildResidHistConfig() {
-  const { residTrain, residOot, xMin, xMax } = _residData;
+  const { btcResid, xMin, xMax } = _residData;
+
+  // Filter residuals by active date range
+  const dateMin = S.range ? new Date(S.range.start).getTime() : -Infinity;
+  const dateMax = S.range ? new Date(S.range.end).getTime()   : Infinity;
+  const filtered = btcResid.filter(p => p.y >= dateMin && p.y <= dateMax);
+  const residTrain = filtered.filter(p => p.y <= H4_TS).map(p => p.x);
+  const residOot   = filtered.filter(p => p.y >  H4_TS).map(p => p.x);
   const allResid = [...residTrain, ...residOot];
-  const N = 60;
+  const N = parseInt(el('hist-bins').value) || 60;
   const binW    = (xMax - xMin) / N;
   const nTotal  = allResid.length;
   const binEdges = Array.from({ length: N + 1 }, (_, i) => xMin + i * binW);
@@ -960,9 +987,8 @@ function buildResidTsDatasets() {
 //   Y = date (linear scale with timestamp values)
 // ═══════════════════════════════════════════════
 function buildResidTsConfig() {
-  const dateMin = S.prices[0].date.getTime();
-  const _today30 = new Date(); _today30.setDate(_today30.getDate() + 30);
-  const dateMax = _today30.getTime();
+  const dateMin = S.range ? new Date(S.range.start).getTime() : S.prices[0].date.getTime();
+  const dateMax = S.range ? new Date(S.range.end).getTime()   : (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.getTime(); })();
 
   return {
     type: 'line',
