@@ -27,23 +27,23 @@
 <h1>Validation of Binary Classification Models</h1>
 <p class="subtitle">Comparing Logistic Regression, Neural Networks, and LightGBM on synthetic data</p>
 
-<p>Binary classification is one of the most common tasks in applied machine learning: fraud detection, credit default prediction, medical diagnosis, churn modeling. In each case the model outputs a probability that an observation belongs to the positive class, and the business decides on a threshold to act on. Choosing the right validation metrics is critical&mdash;especially when the classes are not balanced.</p>
+<p>Binary classification is one of the most common tasks in applied machine learning: fraud detection, credit default prediction, medical diagnosis, churn modeling. In each case the model outputs a probability that an observation belongs to the positive class, and the business decides on a threshold to act on. Choosing the right validation metrics is critical, especially when the classes are not balanced.</p>
 
 <h2>Threshold-Free Metrics</h2>
 
 <p>Before committing to a decision threshold, it is worth evaluating how well the model ranks and scores observations across all possible cut-offs. Threshold-free metrics answer the question: <em>does the model assign higher probabilities to actual positives than to actual negatives?</em> They should be the first thing you look at, because if the model cannot rank well, no choice of threshold will save it.</p>
 
 <h3>ROC Curve and AUC</h3>
-<p>Given a threshold $T$, an observation with score $X > T$ is classified as positive. As $T$ varies, we trace out the Receiver Operating Characteristic curve, plotting TPR$(T)$ against FPR$(T)$. The Area Under this curve (AUC) has a clean probabilistic interpretation&mdash;it equals the probability that the model ranks a randomly chosen positive instance higher than a randomly chosen negative one:</p>
+<p>Given a threshold $T$, an observation with score $X > T$ is classified as positive. As $T$ varies, we trace out the Receiver Operating Characteristic curve, plotting TPR$(T)$ against FPR$(T)$. The Area Under this curve (AUC) has a clean probabilistic interpretation: it equals the probability that the model ranks a randomly chosen positive instance higher than a randomly chosen negative one:</p>
 <div class="math-block">$$\text{AUC} = P(X_1 > X_0)$$</div>
-<p>Equivalently, AUC is the normalized Mann&ndash;Whitney U statistic: $\text{AUC} = U / (P \cdot N)$. The Gini coefficient relates to AUC as $G = 2\,\text{AUC} - 1$ and is the standard discriminatory power metric in credit risk modeling (Basel II/III).</p>
+<p>Equivalently, AUC is the normalized Mann-Whitney U statistic: $\text{AUC} = U / (P \cdot N)$. The Gini coefficient relates to AUC as $G = 2\,\text{AUC} - 1$ and is the standard discriminatory power metric in credit risk modeling (Basel II/III).</p>
 <p>A random classifier scores AUC&nbsp;=&nbsp;0.5; a perfect one scores 1.0. AUC is threshold-independent, which is both its strength (it summarizes all operating points) and its weakness (it weighs regions of the ROC curve that may be operationally irrelevant).</p>
 
-<h3>Precision&ndash;Recall Curve and AUPR</h3>
-<p>When the positive class is rare, the ROC curve can be overly optimistic because FPR stays low even with many false positives (the denominator is the large negative class). The precision&ndash;recall (PR) curve plots precision against recall and is more informative for imbalanced problems. A model that looks strong on ROC may reveal poor precision at useful recall levels on the PR curve.</p>
+<h3>Precision-Recall Curve and AUPR</h3>
+<p>When the positive class is rare, the ROC curve can be overly optimistic because FPR stays low even with many false positives (the denominator is the large negative class). The precision-recall (PR) curve plots precision against recall and is more informative for imbalanced problems. A model that looks strong on ROC may reveal poor precision at useful recall levels on the PR curve.</p>
 <p>The area under the PR curve (AUPR) summarizes this trade-off in a single number:</p>
 <div class="math-block">$$\text{AUPR} = \int_0^1 \text{PPV}(\text{TPR})\, d\text{TPR}$$</div>
-<p>A random classifier achieves AUPR equal to the base rate (the proportion of positives), so unlike AUROC&mdash;where 0.5 is random&mdash;the baseline shifts with class balance. This makes AUPR particularly sensitive to performance on the minority class: a model must maintain high precision even as recall increases, which is hard when positives are rare. For imbalanced problems, a drop from AUROC 0.95 to AUPR 0.40 is common and reveals that the model produces many false positives at useful recall levels. AUPR should be the primary ranking metric when the positive class is the one you care about.</p>
+<p>A random classifier achieves AUPR equal to the base rate (the proportion of positives), so unlike AUROC (where 0.5 is random) the baseline shifts with class balance. This makes AUPR particularly sensitive to performance on the minority class: a model must maintain high precision even as recall increases, which is hard when positives are rare. For imbalanced problems, a drop from AUROC 0.95 to AUPR 0.40 is common and reveals that the model produces many false positives at useful recall levels. AUPR should be the primary ranking metric when the positive class is the one you care about.</p>
 
 <h3>Calibration Curve</h3>
 <p>Discrimination (ranking) is not the same as calibration (probability accuracy). A model can rank well (high AUC) while systematically over- or under-estimating probabilities. The calibration curve bins predicted probabilities and plots them against observed event rates. A perfectly calibrated model lies on the diagonal. In regulated industries like banking, well-calibrated probabilities feed directly into expected loss calculations and capital requirements, making calibration as important as discrimination.</p>
@@ -54,7 +54,7 @@
 <p>The Brier score captures both discrimination and calibration in a single number. It can be decomposed into a reliability term (calibration error), a resolution term (how much predictions vary across groups), and an uncertainty term (base rate entropy). Lower is better; a model that always predicts the base rate achieves the uncertainty-only baseline.</p>
 
 <h3>KS Statistic</h3>
-<p>The Kolmogorov&ndash;Smirnov statistic measures the maximum vertical distance between the cumulative distribution functions of the positive and negative class scores. It identifies the threshold at which the model achieves the greatest separation between classes. KS is widely used in credit scoring as a quick summary of discriminatory power, though it only captures performance at a single operating point.</p>
+<p>The Kolmogorov-Smirnov statistic measures the maximum vertical distance between the cumulative distribution functions of the positive and negative class scores. It identifies the threshold at which the model achieves the greatest separation between classes. KS is widely used in credit scoring as a quick summary of discriminatory power, though it only captures performance at a single operating point.</p>
 
 <h2>Confusion Matrix and Threshold-Dependent Metrics</h2>
 
@@ -69,10 +69,10 @@
 <p>From these four counts we derive the rates that drive model selection:</p>
 
 <ul>
-  <li><strong>Sensitivity</strong> (true positive rate, recall): $\text{TPR} = \frac{\text{TP}}{\text{TP} + \text{FN}}$&mdash;of all actual positives, how many did we catch?</li>
-  <li><strong>Specificity</strong> (true negative rate): $\text{TNR} = \frac{\text{TN}}{\text{TN} + \text{FP}}$&mdash;of all actual negatives, how many did we correctly reject?</li>
-  <li><strong>Precision</strong> (positive predictive value): $\text{PPV} = \frac{\text{TP}}{\text{TP} + \text{FP}}$&mdash;of all positive predictions, how many were correct?</li>
-  <li><strong>False Positive Rate</strong>: $\text{FPR} = 1 - \text{TNR}$&mdash;the false alarm rate, critical in applications like fraud screening where flagging too many legitimate transactions has a direct cost.</li>
+  <li><strong>Sensitivity</strong> (true positive rate, recall): $\text{TPR} = \frac{\text{TP}}{\text{TP} + \text{FN}}$. Of all actual positives, how many did we catch?</li>
+  <li><strong>Specificity</strong> (true negative rate): $\text{TNR} = \frac{\text{TN}}{\text{TN} + \text{FP}}$. Of all actual negatives, how many did we correctly reject?</li>
+  <li><strong>Precision</strong> (positive predictive value): $\text{PPV} = \frac{\text{TP}}{\text{TP} + \text{FP}}$. Of all positive predictions, how many were correct?</li>
+  <li><strong>False Positive Rate</strong>: $\text{FPR} = 1 - \text{TNR}$. The false alarm rate, critical in applications like fraud screening where flagging too many legitimate transactions has a direct cost.</li>
 </ul>
 
 <p>Which cell matters most depends on the business context. In credit risk, a false negative (approving a borrower who defaults) is far more expensive than a false positive (declining a good applicant). In medical screening, missing a true positive can be life-threatening. The choice of metric should reflect these asymmetric costs.</p>
@@ -85,7 +85,7 @@
 <h3>F1 Score</h3>
 <p>F1 captures the trade-off between precision and recall at a specific operating point. It is the harmonic mean of the two, giving equal weight to both:</p>
 <div class="math-block">$$F_1 = 2 \cdot \frac{\text{PPV} \cdot \text{TPR}}{\text{PPV} + \text{TPR}} = \frac{2\text{TP}}{2\text{TP} + \text{FP} + \text{FN}}$$</div>
-<p>Unlike accuracy, F1 ignores true negatives entirely, making it more sensitive to model performance on the minority class. The harmonic mean ensures that a model scoring poorly on either precision or recall cannot achieve a high F1. Note that F1 is a point on the PR curve&mdash;it tells you how well the model performs at your chosen threshold, while AUPR tells you how well it performs across all thresholds.</p>
+<p>Unlike accuracy, F1 ignores true negatives entirely, making it more sensitive to model performance on the minority class. The harmonic mean ensures that a model scoring poorly on either precision or recall cannot achieve a high F1. Note that F1 is a point on the PR curve: it tells you how well the model performs at your chosen threshold, while AUPR tells you how well it performs across all thresholds.</p>
 
 <h3>Matthews Correlation Coefficient</h3>
 <p>MCC is one of the few threshold-dependent metrics that remains informative regardless of class balance. It is essentially the Pearson correlation between the observed and predicted binary vectors, and is related to the $\chi^2$ statistic of the $2 \times 2$ confusion table:</p>
@@ -94,7 +94,7 @@
 
 <h2>Rare Events and Class Imbalance</h2>
 
-<p>Many real-world classification problems involve rare events: loan defaults (1&ndash;5%), fraud (0.1&ndash;1%), equipment failure, rare diseases. When the event rate drops below a few percent, standard metrics and training procedures break down in predictable ways:</p>
+<p>Many real-world classification problems involve rare events: loan defaults (1 to 5%), fraud (0.1 to 1%), equipment failure, rare diseases. When the event rate drops below a few percent, standard metrics and training procedures break down in predictable ways:</p>
 
 <ul>
   <li><strong>Accuracy becomes meaningless.</strong> A naive classifier that always predicts the majority class achieves accuracy of $(1 - \text{event rate})$, which can be 99%+ while providing zero business value.</li>
@@ -105,9 +105,9 @@
 <h2>The Data</h2>
 <p>We generate 4000 observations from the <code>make_moons</code> distribution with Gaussian noise ($\sigma = 0.3$), standardize the features, and split 60/40 into training and test sets. While this synthetic dataset has balanced classes, the non-linear decision boundary and overlapping regions make it a useful testbed for comparing model flexibility. Three models are fit to the same data:</p>
 <ul>
-  <li><strong>Logistic Regression</strong>&mdash;a linear decision boundary. Fast, interpretable, and the baseline in most regulated settings. It will struggle where the true boundary is curved.</li>
-  <li><strong>Neural Network (MLP)</strong>&mdash;a single hidden layer with 3 tanh neurons. Enough capacity to learn moderate non-linearity, but sensitive to initialization and prone to overfitting on small datasets.</li>
-  <li><strong>LightGBM</strong>&mdash;200 trees, max depth 4. Gradient-boosted trees handle non-linear boundaries naturally and are the workhorse of tabular ML. The ensemble structure also provides built-in regularization.</li>
+  <li><strong>Logistic Regression</strong>: a linear decision boundary. Fast, interpretable, and the baseline in most regulated settings. It will struggle where the true boundary is curved.</li>
+  <li><strong>Neural Network (MLP)</strong>: a single hidden layer with 3 tanh neurons. Enough capacity to learn moderate non-linearity, but sensitive to initialization and prone to overfitting on small datasets.</li>
+  <li><strong>LightGBM</strong>: 200 trees, max depth 4. Gradient-boosted trees handle non-linear boundaries naturally and are the workhorse of tabular ML. The ensemble structure also provides built-in regularization.</li>
 </ul>
 <p>Toggle between models and train/test splits below to see how each one performs across all the metrics discussed above.</p>
 
