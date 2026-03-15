@@ -123,14 +123,18 @@
   height: 250px !important;
 }
 
-/* Decision boundary — full width above grid, square */
+/* Decision boundary — full width above grid */
 .chart-card.full-width {
   margin-bottom: 1.25rem;
 }
+.db-layout {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
 .db-square {
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
+  width: 70%;
+  flex-shrink: 0;
   aspect-ratio: 1 / 1;
   position: relative;
 }
@@ -139,6 +143,65 @@
   inset: 0;
   width: 100% !important;
   height: 100% !important;
+}
+
+/* Model info panel */
+.model-info {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.model-info h5 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+.model-info .info-section {
+  margin-bottom: 0.75rem;
+}
+.model-info .info-section-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.25rem;
+}
+.model-info table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.model-info td {
+  padding: 0.15rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.model-info td:first-child {
+  color: var(--muted);
+  white-space: nowrap;
+  font-size: 0.72rem;
+}
+.model-info td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.model-info .info-desc {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .db-layout {
+    flex-direction: column;
+  }
+  .db-square {
+    width: 100%;
+    max-width: 400px;
+  }
 }
 
 /* ── Metrics table ── */
