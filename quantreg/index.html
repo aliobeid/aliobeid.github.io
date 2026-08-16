@@ -727,52 +727,67 @@ function updateResidTsTooltip(chart, cursorX, cursorY) {
     chart.canvas.parentElement.appendChild(el);
   }
 
-  const cursorTs    = chart.scales.y.getValueForPixel(cursorY);
-  const cursorResid = chart.scales.x.getValueForPixel(cursorX);
-  const date  = new Date(cursorTs);
-  const days  = daysSince(date);
-  if (days <= 0) { el.style.opacity = '0'; return; }
+  const cursorTs = chart.scales.y.getValueForPixel(cursorY);
+  const lastBtcTs = _residData.btcResid[_residData.btcResid.length - 1].y;
 
-  // price implied by cursor position: resid = log(price / (am * days^bm))
-  const { am, bm } = _residData;
-  const price   = am * Math.pow(days, bm) * Math.exp(cursorResid);
-  const dateStr = date.toISOString().slice(0, 10);
+  const rows = [];
 
-  // Build (offset, q) pairs from ALL qr_results at this date, then interpolate
-  const qrPairs = Object.keys(S.model.qr_results)
-    .map(k => {
-      const qk = Number(k);
-      const { a: aq, b: bq } = S.model.qr_results[k];
-      const offset = Math.log(aq * Math.pow(days, bq)) - Math.log(am * Math.pow(days, bm));
-      return { offset, q: qk };
-    })
-    .sort((a, b) => a.offset - b.offset);
-
-  let q;
-  if (cursorResid <= qrPairs[0].offset) {
-    q = qrPairs[0].q;
-  } else if (cursorResid >= qrPairs[qrPairs.length - 1].offset) {
-    q = qrPairs[qrPairs.length - 1].q;
-  } else {
-    for (let i = 0; i < qrPairs.length - 1; i++) {
-      if (cursorResid >= qrPairs[i].offset && cursorResid <= qrPairs[i + 1].offset) {
-        const t = (cursorResid - qrPairs[i].offset) / (qrPairs[i + 1].offset - qrPairs[i].offset);
-        q = qrPairs[i].q + t * (qrPairs[i + 1].q - qrPairs[i].q);
-        break;
-      }
+  chart.data.datasets.forEach((ds, di) => {
+    const pts = ds.data;
+    if (!pts || !pts.length) return;
+    // Binary search on Y (date): first index where pts[i].y >= cursorTs
+    let lo = 0, hi = pts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (pts[mid].y < cursorTs) lo = mid + 1; else hi = mid;
     }
-  }
+    if (lo > 0 && Math.abs(pts[lo - 1].y - cursorTs) <= Math.abs(pts[lo].y - cursorTs)) lo--;
+    const pt = pts[lo];
 
-  el.innerHTML = `<div style="color:#8b949e;margin-bottom:4px">${dateStr}</div>` +
-    `<div>${fmtPrice(price)}</div>` +
-    `<div style="color:#8b949e;margin-top:3px">q\u202f\u2248\u202f${q.toFixed(3)}</div>`;
+    if (di === 0) {
+      if (cursorTs > lastBtcTs) return;
+      rows.push({ x: pt.x, html: tooltipRow(ds.borderColor, `Residual: ${pt.x.toFixed(3)}`) });
+    } else {
+      const q = parseFloat(ds.label.replace('q=', ''));
+      rows.push({ x: pt.x, html: tooltipRow(ds.borderColor, `q=${q.toFixed(3)}: ${pt.x.toFixed(3)}`) });
+    }
+  });
+
+  // Snap crosshair to nearest BTC date
+  const btcPts = chart.data.datasets[0].data;
+  let lo = 0, hi = btcPts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (btcPts[mid].y < cursorTs) lo = mid + 1; else hi = mid;
+  }
+  if (lo > 0 && Math.abs(btcPts[lo - 1].y - cursorTs) <= Math.abs(btcPts[lo].y - cursorTs)) lo--;
+  const snapTs  = btcPts[lo].y;
+  const dateStr = new Date(snapTs).toISOString().slice(0, 10);
+
+  // Also show implied price at the BTC residual
+  const days = daysSince(new Date(snapTs));
+  const { am, bm } = _residData;
+  const btcResidVal = btcPts[lo].x;
+  const price = days > 0 ? am * Math.pow(days, bm) * Math.exp(btcResidVal) : null;
+
+  rows.sort((a, b) => b.x - a.x);
+  let html = `<div style="color:#8b949e;margin-bottom:4px">${dateStr}`;
+  if (price && cursorTs <= lastBtcTs) html += ` &middot; ${fmtPrice(price)}`;
+  html += `</div>`;
+  html += rows.map(r => r.html).join('');
+
+  el.innerHTML = html;
   el.style.opacity = '1';
 
-  const ca   = chart.chartArea;
-  const flipX = cursorX > ca.left + (ca.right - ca.left) * 0.6;
-  el.style.left = (flipX ? cursorX - el.offsetWidth - 12 : cursorX + 12) + 'px';
+  // Snap crosshair Y to the matched date
+  chart._crosshairY = chart.scales.y.getPixelForValue(snapTs);
+
+  // Position: follow cursor y, pin near left of chart area; flip up when near bottom
+  const ca = chart.chartArea;
+  el.style.left = (ca.left + 8) + 'px';
   const tipH = el.offsetHeight;
-  el.style.top  = Math.max(ca.top, Math.min(cursorY - tipH / 2, ca.bottom - tipH - 4)) + 'px';
+  const flipY = cursorY > ca.top + (ca.bottom - ca.top) * 0.6;
+  el.style.top = (flipY ? cursorY - tipH - 12 : cursorY + 12) + 'px';
 }
 
 const residTsCrosshairPlugin = {
